@@ -3,6 +3,7 @@ require("dotenv").config();
 const morgan = require("morgan");
 const express = require("express");
 const cors = require("cors");
+
 const app = express();
 
 // token to return data for POST requests
@@ -15,6 +16,7 @@ morgan.token("data", (req) => {
 
 // middleware
 app.use(cors());
+app.use(express.static("dist"));
 app.use(express.json());
 app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :data")
@@ -101,6 +103,7 @@ app.post("/api/persons", (request, response) => {
   };
 
   persons = persons.concat(person);
+  console.log("added", person.name);
 
   response.json(person);
 });
