@@ -15,8 +15,19 @@ mongoose
 
 // set up schema and model
 const personSchema = new mongoose.Schema({
-  name: String,
-  number: String,
+  name: {
+    type: String,
+    minLength: 3,
+    required: true,
+  },
+  number: {
+    type: String,
+    minLength: 8,
+    validate: {
+      validator: (v) => /^\d{2,3}-\d{5,}$/.test(v),
+    },
+    required: true,
+  },
 });
 
 // format toJSON method of schema

@@ -19,11 +19,14 @@ morgan.token("data", (req) => {
 // error handling middleware function
 const errorHandler = (error, request, response, next) => {
   console.error(error.message);
+  console.log(error.name);
 
   if (error.name === "CastError") {
     return response.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    console.log("sending...");
+    return response.status(400).json({ error: error.message });
   }
-
   next(error);
 };
 
@@ -67,7 +70,7 @@ app.get("/api/persons/:id", (request, response, next) => {
 });
 
 // CREATE PERSON
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const body = request.body;
 
   // missing name or number
@@ -83,13 +86,17 @@ app.post("/api/persons", (request, response) => {
     number: body.number,
   });
 
-  person.save().then((savedPerson) => {
-    response.json(savedPerson);
-  });
+  // save to db or handle validator
+  person
+    .save()
+    .then((savedPerson) => {
+      response.json(savedPerson);
+    })
+    .catch((error) => next(error));
   console.log("added", person.name);
 });
 
-// DELTE PERSON BASED ON ID
+// DELETE PERSON BASED ON ID
 app.delete("/api/persons/:id", (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
     .then((result) => {
@@ -99,19 +106,30 @@ app.delete("/api/persons/:id", (request, response, next) => {
     .catch((error) => next(error));
 });
 
+// UPDATE PERSON BASED ON ID
 app.put("/api/persons/:id", (request, response, next) => {
-  // create updated person object
-  const body = request.body;
-  const person = {
-    name: body.name,
-    number: body.number,
-  };
+  const { name, number } = request.body;
+  console.log("in function");
 
   // replace old person with new person object by ID
-  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+  Person.findByIdAndUpdate(
+    request.params.id,
+    { name, number },
+    {
+      new: true,
+      runValidators: true, // enable mongoose validator
+      context: "query",
+    }
+  )
     .then((updatedPerson) => {
-      console.log("updated!");
-      response.json(updatedPerson);
+      // ensures person ID found
+      if (updatedPerson) {
+        response.json(updatedPerson);
+      } else {
+        response.status(404).send({
+          error: `Information of ${name} has already been removed from server`,
+        });
+      }
     })
     .catch((error) => next(error));
 });
