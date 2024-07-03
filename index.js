@@ -128,8 +128,10 @@ app.get("/api/info", (request, response, next) => {
     .catch((error) => next(error));
 });
 
-// next middleware
+// registered at end of middleware stock (no route matches)
 app.use(unknownEndpoint);
+
+// error handling middleware used upon next(error) call
 app.use(errorHandler);
 
 const PORT = process.env.PORT;
