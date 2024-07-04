@@ -1,115 +1,115 @@
 // set up express app
-const express = require("express");
-const app = express();
-require("dotenv").config();
-const morgan = require("morgan");
-const cors = require("cors");
+const express = require('express')
+const app = express()
+require('dotenv').config()
+const morgan = require('morgan')
+const cors = require('cors')
 
 // set up person model
-const Person = require("./models/person");
+const Person = require('./models/person')
 
 // log data for POST requests
-morgan.token("data", (req) => {
-  if (req.method === "POST") {
-    return JSON.stringify(req.body);
+morgan.token('data', (req) => {
+  if (req.method === 'POST') {
+    return JSON.stringify(req.body)
   }
-  return "";
-});
+  return ''
+})
 
 // error handling middleware function
 const errorHandler = (error, request, response, next) => {
-  console.error(error.message);
-  console.log(error.name);
+  console.error(error.message)
+  console.log(error.name)
 
-  if (error.name === "CastError") {
-    return response.status(400).send({ error: "malformatted id" });
-  } else if (error.name === "ValidationError") {
-    console.log("sending...");
-    return response.status(400).json({ error: error.message });
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    console.log('sending...')
+    return response.status(400).json({ error: error.message })
   }
-  next(error);
-};
+  next(error)
+}
 
 // unknown endpoint middleware function
 const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: "unknown endpoint" });
-};
+  response.status(404).send({ error: 'unknown endpoint' })
+}
 
 // middleware
-app.use(cors());
-app.use(express.static("dist"));
-app.use(express.json());
+app.use(cors())
+app.use(express.static('dist'))
+app.use(express.json())
 app.use(
-  morgan(":method :url :status :res[content-length] - :response-time ms :data")
-);
+  morgan(':method :url :status :res[content-length] - :response-time ms :data')
+)
 
 // DEFAULT PAGE
-app.get("/", (req, res) => {
-  res.send("<h1>Hello World!</h1>");
-});
+app.get('/', (req, res) => {
+  res.send('<h1>Hello World!</h1>')
+})
 
 // FETCH DATA
-app.get("/api/persons", (request, response) => {
+app.get('/api/persons', (request, response) => {
   Person.find({}).then((persons) => {
-    response.json(persons);
-  });
-  console.log("fetched data from backend...");
-});
+    response.json(persons)
+  })
+  console.log('fetched data from backend...')
+})
 
 // FETCH PERSON BY ID
-app.get("/api/persons/:id", (request, response, next) => {
+app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id)
     .then((person) => {
       if (person) {
-        response.json(person);
+        response.json(person)
       } else {
-        response.status(404).end();
+        response.status(404).end()
       }
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
 // CREATE PERSON
-app.post("/api/persons", (request, response, next) => {
-  const body = request.body;
+app.post('/api/persons', (request, response, next) => {
+  const body = request.body
 
   // missing name or number
   if (!body.name || !body.number) {
     return response.status(400).json({
-      error: "missing name or number",
-    });
+      error: 'missing name or number',
+    })
   }
 
   // add person object to db
   const person = new Person({
     name: body.name,
     number: body.number,
-  });
+  })
 
   // save to db or handle validator
   person
     .save()
     .then((savedPerson) => {
-      response.json(savedPerson);
+      response.json(savedPerson)
     })
-    .catch((error) => next(error));
-  console.log("added", person.name);
-});
+    .catch((error) => next(error))
+  console.log('added', person.name)
+})
 
 // DELETE PERSON BASED ON ID
-app.delete("/api/persons/:id", (request, response, next) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
-    .then((result) => {
-      console.log("scucessful delete");
-      response.status(204).end();
+    .then(() => {
+      console.log('scucessful delete')
+      response.status(204).end()
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
 // UPDATE PERSON BASED ON ID
-app.put("/api/persons/:id", (request, response, next) => {
-  const { name, number } = request.body;
-  console.log("in function");
+app.put('/api/persons/:id', (request, response, next) => {
+  const { name, number } = request.body
+  console.log('in function')
 
   // replace old person with new person object by ID
   Person.findByIdAndUpdate(
@@ -118,41 +118,41 @@ app.put("/api/persons/:id", (request, response, next) => {
     {
       new: true,
       runValidators: true, // enable mongoose validator
-      context: "query",
+      context: 'query',
     }
   )
     .then((updatedPerson) => {
       // ensures person ID found
       if (updatedPerson) {
-        response.json(updatedPerson);
+        response.json(updatedPerson)
       } else {
         response.status(404).send({
           error: `Information of ${name} has already been removed from server`,
-        });
+        })
       }
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
-app.get("/api/info", (request, response, next) => {
+app.get('/api/info', (request, response, next) => {
   Person.countDocuments({})
     .then((entries) => {
-      const timestamp = new Date();
+      const timestamp = new Date()
       response.send(
         `<p>Phonebook has info for ${entries} people</p>
       <p>${timestamp}</p>`
-      );
+      )
     })
-    .catch((error) => next(error));
-});
+    .catch((error) => next(error))
+})
 
 // registered at end of middleware stock (no route matches)
-app.use(unknownEndpoint);
+app.use(unknownEndpoint)
 
 // error handling middleware used upon next(error) call
-app.use(errorHandler);
+app.use(errorHandler)
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}!!`);
-});
+  console.log(`Server running on port ${PORT}!!`)
+})
